@@ -1,0 +1,28 @@
+
+
+df_covid = spark.read.format('csv').option('header','true').option('inferSchema', True).load('owid-covid-data.csv')
+df_covid.select('iso_code','location','positive_rate').where(col('date')=='2020-03-31').orderBy(desc('positive_rate')).show(15)
+
+
+from pyspark.sql.functions import *
+from pyspark.sql.types import *
+
+
+df_covid.select('date','location','iso_code','new_cases').where((col('date')>='2020-03-25')&(col('date')<='2020-03-31')).sort(desc('new_cases')).filter(~col('iso_code').like('%OWID%')).show(10)
+
+
+
+df_covid = df_covid.withColumn('date',col('date').cast(DateType()))
+
+df_covid_3 = df_covid.select('date','new_cases','location', date_add('date',1).alias('date_yesterday')).where(col('location') == 'Russia').where(col('date') >='2021-03-24')
+
+df_covid_4 = df_covid_3
+df_covid_3.show(4)
+df_covid_4 = df_covid_4.drop('date')
+df_covid_3 = df_covid_3.drop('date_yesterday')
+df_covid_4 = df_covid_4.withColumnRenamed('date_yesterday','date')
+df_covid_4 = df_covid_4.drop('location')
+df_covid_4 = df_covid_4.withColumnRenamed('new_cases','yesterday_cases')
+df_covid_5 = df_covid_3.join(df_covid_4,['date'],'left')
+df_covid_5 = df_covid_5.withColumn('delta',df_covid_5.new_cases - df_covid_5.yesterday_cases)
+
