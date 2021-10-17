@@ -1,0 +1,12 @@
+
+
+df_covid = spark.read.format('csv').option('header','true').option('inferSchema', True).load('owid-covid-data.csv')
+
+
+from pyspark.sql.functions import *
+from pyspark.sql.types import *
+
+
+df_covid.withColumn('week',lit('2021-03-25 --- 2021-03-31')).select('date','week','location','iso_code','new_cases')
+.where((col('date')>='2021-03-25')&(col('date')<='2021-03-31')).filter(~col('iso_code').like('%OWID%')).groupBy('week','
+location').agg(sum('new_cases').alias('sum_new_cases')).sort(desc('sum_new_cases')).show(10)
